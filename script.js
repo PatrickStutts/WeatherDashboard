@@ -1,164 +1,127 @@
+function initPage() {
+    const inputEl = document.getElementById("city-input");
+    const searchEl = document.getElementById("search-button");
+    const clearEl = document.getElementById("clear-history");
+    const nameEl = document.getElementById("city-name");
+    const currentPicEl = document.getElementById("current-pic");
+    const currentTempEl = document.getElementById("temperature");
+    const currentHumidityEl = document.getElementById("humidity");4
+    const currentWindEl = document.getElementById("wind-speed");
+    const currentUVEl = document.getElementById("UV-index");
+    const historyEl = document.getElementById("history");
+    let searchHistory = JSON.parse(localStorage.getItem("search")) || [];
+    console.log(searchHistory);
+    
+// store API 
+    const APIKey = "cffc34e51b2267e1b6711d1a8864da40";
+//  When search btn clicked, display user input
 
-// This is our API key
+    function getWeather(cityName) {
+//  THEN execute a current condition get request from open weather map api
+        let queryURL = "https://api.openweathermap.org/data/2.5/weather?q=" + cityName + "&appid=" + APIKey;
+        axios.get(queryURL)
+        .then(function(response){
+            console.log(response);
+//  Parse response to display current conditions
+        //  Method for using "date" objects obtained from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date
+            const currentDate = new Date(response.data.dt*1000);
+            console.log(currentDate);
+            const day = currentDate.getDate();
+            const month = currentDate.getMonth() + 1;
+            const year = currentDate.getFullYear();
+            nameEl.innerHTML = response.data.name + " (" + month + "/" + day + "/" + year + ") ";
+            let weatherPic = response.data.weather[0].icon;
+            currentPicEl.setAttribute("src","https://openweathermap.org/img/wn/" + weatherPic + "@2x.png");
+            currentPicEl.setAttribute("alt",response.data.weather[0].description);
+            currentTempEl.innerHTML = "Temperature: " + k2f(response.data.main.temp) + " &#176F";
+            currentHumidityEl.innerHTML = "Humidity: " + response.data.main.humidity + "%";
+            currentWindEl.innerHTML = "Wind Speed: " + response.data.wind.speed + " MPH";
+        let lat = response.data.coord.lat;
+        let lon = response.data.coord.lon;
+        let UVQueryURL = "https://api.openweathermap.org/data/2.5/uvi/forecast?lat=" + lat + "&lon=" + lon + "&appid=" + APIKey + "&cnt=1";
+        axios.get(UVQueryURL)
+        .then(function(response){
+            let UVIndex = document.createElement("span");
+            UVIndex.setAttribute("class","badge badge-danger");
+            UVIndex.innerHTML = response.data[0].value;
+            currentUVEl.innerHTML = "UV Index: ";
+            currentUVEl.append(UVIndex);
+        });
+//  Using saved city name, execute a 5-day forecast get request from open weather map api
+        let cityID = response.data.id;
+        let forecastQueryURL = "https://api.openweathermap.org/data/2.5/forecast?id=" + cityID + "&appid=" + APIKey;
+        axios.get(forecastQueryURL)
+        .then(function(response){
+//  Parse response to display forecast for next 5 days underneath current conditions
+            console.log(response);
+            const forecastEls = document.querySelectorAll(".forecast");
+            for (i=0; i<forecastEls.length; i++) {
+                forecastEls[i].innerHTML = "";
+                const forecastIndex = i*8 + 4;
+                const forecastDate = new Date(response.data.list[forecastIndex].dt * 1000);
+                const forecastDay = forecastDate.getDate();
+                const forecastMonth = forecastDate.getMonth() + 1;
+                const forecastYear = forecastDate.getFullYear();
+                const forecastDateEl = document.createElement("p");
+                forecastDateEl.setAttribute("class","mt-3 mb-0 forecast-date");
+                forecastDateEl.innerHTML = forecastMonth + "/" + forecastDay + "/" + forecastYear;
+                forecastEls[i].append(forecastDateEl);
+                const forecastWeatherEl = document.createElement("img");
+                forecastWeatherEl.setAttribute("src","https://openweathermap.org/img/wn/" + response.data.list[forecastIndex].weather[0].icon + "@2x.png");
+                forecastWeatherEl.setAttribute("alt",response.data.list[forecastIndex].weather[0].description);
+                forecastEls[i].append(forecastWeatherEl);
+                const forecastTempEl = document.createElement("p");
+                forecastTempEl.innerHTML = "Temp: " + k2f(response.data.list[forecastIndex].main.temp) + " &#176F";
+                forecastEls[i].append(forecastTempEl);
+                const forecastHumidityEl = document.createElement("p");
+                forecastHumidityEl.innerHTML = "Humidity: " + response.data.list[forecastIndex].main.humidity + "%";
+                forecastEls[i].append(forecastHumidityEl);
+                }
+            })
+        });  
+    }
 
-var APIKey = "cffc34e51b2267e1b6711d1a8864da40";
-var city = localStorage.getItem("lastresult");
+    searchEl.addEventListener("click",function() {
+        const searchTerm = inputEl.value;
+        getWeather(searchTerm);
+        searchHistory.push(searchTerm);
+        localStorage.setItem("search",JSON.stringify(searchHistory));
+        renderSearchHistory();
+    })
 
+    clearEl.addEventListener("click",function() {
+        searchHistory = [];
+        renderSearchHistory();
+    })
 
+    function k2f(K) {
+        return Math.floor((K - 273.15) *1.8 +32);
+    }
 
-// Here we are building the URL we need to query the database + api key 
+    function renderSearchHistory() {
+        historyEl.innerHTML = "";
+        for (let i=0; i<searchHistory.length; i++) {
+            const historyItem = document.createElement("input");
+            // <input type="text" readonly class="form-control-plaintext" id="staticEmail" value="email@example.com"></input>
+            historyItem.setAttribute("type","text");
+            historyItem.setAttribute("readonly",true);
+            historyItem.setAttribute("class", "form-control d-block bg-white");
+            historyItem.setAttribute("value", searchHistory[i]);
+            historyItem.addEventListener("click",function() {
+                getWeather(historyItem.value);
+            })
+            historyEl.append(historyItem);
+        }
+    }
 
-    var queryURL = "https://api.openweathermap.org/data/2.5/weather?q=" + city + APIKey;
-    var queryURLFive = "https://api.openweathermap.org/data/2.5/forecast?q=" + city + APIKey;
-
-// Here we run our AJAX call to the OpenWeatherMap API
-
-$.ajax({
-    url: queryURL,
-    method: "GET"
-})// We store all of the retrieved data inside of an object called "response"
-.then(function(response) {
-    console.log(queryURL);
-    console.log(response);
-
-// Transfer content to HTML
-    $(".city").html("<h1>" + response.name + "</h1>");
-    $(".icon").html("<img src='https://openweathermap.org/img/w/" + response.weather[0].icon + ".png' alt='Icon depicting current weather.'>");
-    $(".wind").text("Wind Speed: " + response.wind.speed + " MPH");
-    $(".humidity").text("Humidity: " + response.main.humidity + "%");
-
-// Converts the temp to Kelvin with the below formula
-var tempF = (response.main.temp - 273.15) * 1.80 + 32;
-$(".tempF").text("Temperature: " + Math.round(tempF) + " °F");
-
-
-var lon = response.coord.lon;
-var lat = response.coord.lon;
-var queryURLUv = "https://api.openweathermap.org/data/2.5/uvi?" + "lat=" + lat + "&lon=" + lon + APIKey;
-
-
-//get uv index
-
-$.ajax({
-    url: queryURLUv,
-    method: "GET"
-})// We store all of the retrieved data inside of an object called "response"
-.then(function(response) {
-    console.log(queryURL);
-    console.log(response);
-
-    //transfer content to HTML
-    $(".uv").text("UV Index: " + response.value);
-    $(".uv").css("background-color", "yellow");
-
-
-});
-
-
-});
-
-$.ajax({
-    url: queryURLFive,
-    method: "GET"
-})// We store all of the retrieved data inside of an object called "response"
-.then(function(response) {
-    console.log(queryURLFive);
-    console.log(response);
-
-var dayOne = moment(response.list[0].dt_txt).format("ddd, MMM D");
-console.log(moment(response.list[0].dt_txt).format("ddd, MMM D"));
-
-// Transfer day 1 content to HTML
-$(".day-one-date").html("<h6>" + dayOne + "</h6>");
-$(".day-one-icon").html("<img src='https://openweathermap.org/img/w/" + response.list[0].weather[0].icon + ".png' alt='Icon depicting current weather.'>");
-$(".day-one-humidity").text("Humidity: " + response.list[0].main.humidity + "%");
-
-// Converts the temp to Kelvin with the below formula
-var tempOne = (response.list[0].main.temp - 273.15) * 1.80 + 32;
-$(".day-one-temp").text("Temp: " + Math.round(tempOne) + " °F");
-
-var dayTwo = moment(response.list[8].dt_txt).format("ddd, MMM D");
-
-// Transfer day 2 content to HTML
-$(".day-two-date").html("<h6>" + dayTwo + "</h6>");
-$(".day-two-icon").html("<img src='https://openweathermap.org/img/w/" + response.list[8].weather[0].icon + ".png' alt='Icon depicting current weather.'>");
-$(".day-two-humidity").text("Humidity: " + response.list[8].main.humidity + "%");
-
-// Converts the temp to Kelvin with the below formula
-var tempTwo = (response.list[8].main.temp - 273.15) * 1.80 + 32;
-$(".day-two-temp").text("Temp: " + Math.round(tempTwo) + " °F");
-
-var dayThree = moment(response.list[16].dt_txt).format("ddd, MMM D");
-
-// Transfer day 3 content to HTML
-$(".day-three-date").html("<h6>" + dayThree + "</h6>");
-$(".day-three-icon").html("<img src='https://openweathermap.org/img/w/" + response.list[16].weather[0].icon + ".png' alt='Icon depicting current weather.'>");
-$(".day-three-humidity").text("Humidity: " + response.list[16].main.humidity + "%");
-
-// Converts the temp to Kelvin with the below formula
-var tempThree = (response.list[16].main.temp - 273.15) * 1.80 + 32;
-$(".day-three-temp").text("Temp: " + Math.round(tempThree) + " °F");
-
-var dayFour = moment(response.list[24].dt_txt).format("ddd, MMM D");
-
-// Transfer day 4 content to HTML
-$(".day-four-date").html("<h6>" + dayFour + "</h6>");
-$(".day-four-icon").html("<img src='https://openweathermap.org/img/w/" + response.list[24].weather[0].icon + ".png' alt='Icon depicting current weather.'>");
-$(".day-four-humidity").text("Humidity: " + response.list[24].main.humidity + "%");
-
-// Converts the temp to Kelvin with the below formula
-var tempFour = (response.list[24].main.temp - 273.15) * 1.80 + 32;
-$(".day-four-temp").text("Temp: " + Math.round(tempFour) + " °F");
-
-var dayFive = moment(response.list[32].dt_txt).format("ddd, MMM D");
-
-// Transfer day 5 content to HTML
-$(".day-five-date").html("<h6>" + dayFive + "</h6>");
-$(".day-five-icon").html("<img src='https://openweathermap.org/img/w/" + response.list[32].weather[0].icon + ".png' alt='Icon depicting current weather.'>");
-$(".day-five-humidity").text("Humidity: " + response.list[32].main.humidity + "%");
-
-// Converts the temp to Kelvin with the below formula
-var tempFive = (response.list[32].main.temp - 273.15) * 1.80 + 32;
-$(".day-five-temp").text("Temp: " + Math.round(tempFive) + " °F");
+    renderSearchHistory();
+    if (searchHistory.length > 0) {
+        getWeather(searchHistory[searchHistory.length - 1]);
+    }
 
 
-
-});
-
-
-
-// Use the search field
-
-var searchInput = document.querySelector(".input");
-var searchOutput = document.querySelector(".output");
-var searchButton = document.querySelector(".search");
-
-searchButton.addEventListener("click", searchFunction);
-
-
-function searchFunction() {
-    localStorage.setItem("inputcontent-" + searchInput.value, searchInput.value);
-    localStorage.setItem("lastresult", searchInput.value);
+//  Save user's search requests and display them underneath search form
+//  When page loads, automatically generate current conditions and 5-day forecast for the last city the user searched for
 
 }
-
-for (var i = 0; i < localStorage.length; i++){
-    $(".output").append("<p class='cityresult'>" + localStorage.getItem(localStorage.key(i)) + "</p>");
-}
-
-
-//link previous search results to search again
-
-//code goes here
-
-//insert current day
-
-var currentDay = moment().format("dddd, MMMM Do");
-
-function insertCurrentDay() {
-    $(".current-date").text(currentDay);
-};
-
-insertCurrentDay();
-
-console.log(currentDay);
+initPage();

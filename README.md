@@ -11,5 +11,5 @@ In our weather dashboard app you can get the run down on your current city and a
 This assignment was meant to build my skills in using a third-party API source to fetch data for my app to use. 
 <p> 
   https://patrickstutts.github.io/WeatherDashboard/
-  
+  ![screenshot](weatherDashboard.png); 
   

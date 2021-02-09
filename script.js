@@ -1,4 +1,4 @@
-//link api 
+
 // This is our API key
 
 var APIKey = "cffc34e51b2267e1b6711d1a8864da40";
@@ -6,7 +6,7 @@ var city = localStorage.getItem("lastresult");
 
 
 
-// Here we are building the URL we need to query the database
+// Here we are building the URL we need to query the database + api key 
 
     var queryURL = "https://api.openweathermap.org/data/2.5/weather?q=" + city + APIKey;
     var queryURLFive = "https://api.openweathermap.org/data/2.5/forecast?q=" + city + APIKey;
